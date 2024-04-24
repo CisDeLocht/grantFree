@@ -1,5 +1,5 @@
 import numpy as np
-from cell_functions import populate_cell, calculate_distance, simulate_path_loss_rayleigh
+from cell_functions import * #populate_cell, calculate_distance, simulate_path_loss_rayleigh
 
 if __name__ == '__main__':
     #------------ Simulation Parameters --------------
@@ -13,9 +13,9 @@ if __name__ == '__main__':
 
     grid, indices, indices_list = populate_cell(grid, sparsity)
 
-    distances = calculate_distance(grid, indices)
-    channel_coeff = [simulate_path_loss_rayleigh(d, freq, PLE) for d in distances]
-
+    distances = np.asarray(calculate_distance(grid, indices))
+    channel_coeff = np.asarray([simulate_path_loss_rayleigh(d, freq, PLE) for d in distances])
+    noise_vector = np.asarray([simulate_noise(SNR) for i in range(0, len(channel_coeff))])
 
     print(grid)
     print(indices_list)

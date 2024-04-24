@@ -32,6 +32,12 @@ def simulate_path_loss_rayleigh(d, f, n):
     PL_CI = FSPL + 10 * n * np.log10(d)
     PL_lin = 1/(10**(PL_CI/10))         #Square root or not?
     rayleigh_fading = np.random.normal(0, np.sqrt(0.5)) + 1j * np.random.normal(0, np.sqrt(0.5))
-    PL_with_fading = PL_lin * rayleigh_fading
+    h = PL_lin * rayleigh_fading
 
-    return PL_with_fading
+    return h
+
+def simulate_noise(snr):
+    s_lin = 10 ** (snr / 10)
+    n_std = np.sqrt(1 / (2 * s_lin))
+    n = np.random.normal(0, n_std) + 1j * np.random.normal(0, n_std)
+    return n
