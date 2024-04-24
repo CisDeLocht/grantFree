@@ -18,22 +18,28 @@ def populate_cell(grid, sparsity):
     return grid, indices, indices_list
 
 
-def calculate_distance(grid, indices):
+def calculate_distances(grid, indices):
     grid_size = grid.shape[0]
     center = int((grid_size - 1) / 2)
     center_index = np.array([center, center])
-    distances = [np.linalg.norm(center_index - index) for index in indices]
+    distances2b = np.asarray([np.linalg.norm(center_index - index) for index in indices])
+    num_users = len(indices)
+    distance_matrix = np.array([[np.linalg.norm(indices[i] - indices[j]) for j in range(num_users)] for i in range(num_users)])
 
-    return distances
+    return distances2b, distance_matrix
 
-#REMEMBER: shadow fading can be implemented by having a Gauss. addition to the dB value of PL_CI
-def simulate_path_loss_rayleigh(d, f, n):
-    FSPL = 20 * np.log10(d) + 20 * np.log10(f) - 147.55
-    PL_CI = FSPL + 10 * n * np.log10(d)
-    PL_lin = 1/(10**(PL_CI/10))         #Square root or not?
-    rayleigh_fading = np.random.normal(0, np.sqrt(0.5)) + 1j * np.random.normal(0, np.sqrt(0.5))
-    h = PL_lin * rayleigh_fading
-
+#TODO correlated shadow fading
+def generate_correlated_shadow_fading(distance_matrix, sigma):
+    SF_uncorrelated = np.random.normal(0, sigma, distance_matrix.shape[0])
+    SF = 0
+    return SF
+def simulate_path_loss_rayleigh(d2b, dm, f):
+    UMC_PL = 36.7*np.log10(d2b) + 22.7 + 26*np.log10(f)
+    SF = generate_correlated_shadow_fading(dm, 4)
+    PL_dB = UMC_PL + SF                                                                                  #sigma = 4 according to UMC model in TS 36.814
+    PL = 10**(PL_dB/10)
+    rayleigh_fading = np.random.normal(0, np.sqrt(0.5)) + 1j * np.random.normal(0, np.sqrt(0.5)) #vector required here
+    h = np.sqrt(PL) * rayleigh_fading
     return h
 
 def simulate_noise(snr):
