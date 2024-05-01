@@ -7,15 +7,16 @@ if __name__ == '__main__':
     grid_size = 2*cell_radius + 1
     sparsity = 0.1
     grid = np.zeros((grid_size, grid_size))
-    freq = 2e9                                                            #in Hertz
-    PLE = 2.5                                                               #Path Loss Exponent [2 - 4]
+    freq = 2                                                                #in GHz
     SNR = 10                                                                #in dB
 
     grid, indices, indices_list = populate_cell(grid, sparsity)
 
     distances2b, distance_matrix = calculate_distances(grid, indices)
-    channel_coeff = np.asarray([simulate_path_loss_rayleigh(d, freq, PLE) for d in distances2b])
-    noise_vector = np.asarray([simulate_noise(SNR) for i in range(0, len(channel_coeff))])
+    channel_coeff = simulate_path_loss_rayleigh(distances2b,distance_matrix, freq)
+    noise_vector = simulate_noise(SNR, len(distances2b))
+
+    #TODO create pilots somehow
 
     print(grid)
     print(indices_list)
