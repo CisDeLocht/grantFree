@@ -1,5 +1,6 @@
 import numpy as np
 import scipy as sp
+import scipy.io as sio
 
 def populate_cell(grid, sparsity):
     grid_size = grid.shape[0]
@@ -54,6 +55,12 @@ def generate_gaussian_pilots(L, N):
     norms = np.linalg.norm(pilots, axis=0)
     p_n = pilots/norms
     return p_n
+
+def get_ICBP_pilots(filename):
+    vars = sio.loadmat(filename)
+    A_ICBP = vars['X']
+    coherence = vars['muX'][0][0]
+    return A_ICBP, coherence
 
 def simulate_noise(snr, L, M):
     s_lin = 10 ** (snr / 10)
