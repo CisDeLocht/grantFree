@@ -40,27 +40,31 @@ def generate_correlated_shadow_fading(distance_matrix, sigma):
     D[np.abs(D) < eps] = 0
     SF = L @ np.sqrt(D) @ SF_uncorrelated
     return SF
-def simulate_path_loss_rayleigh(d2b, dm, M, f):
+def simulate_path_loss_rayleigh(d2b, dm, M, N, f):
     UMC_PL = 36.7*np.log10(d2b) + 22.7 + 26*np.log10(f)
     SF = generate_correlated_shadow_fading(dm, 4)
     PL_dB = UMC_PL + SF                                                                                  #sigma = 4 according to UMC model in TS 36.814
     PL = 10**(-PL_dB/10)
     rayleigh_fading = np.random.normal(0, np.sqrt(0.5), size=(d2b.shape[0], M)) + 1j * np.random.normal(0, np.sqrt(0.5), size=(d2b.shape[0], M))
-    H = np.multiply(np.sqrt(PL.reshape(8,1)) , rayleigh_fading)
+    H = np.multiply(np.sqrt(PL.reshape(N,1)) , rayleigh_fading)
     return H
 
-def generate_gaussian_pilots(L, N):
+def generate_gaussian_pilots(L, N, K):
     std = np.sqrt(1/(2*L))
-    pilots = np.random.normal(0, std, size=(L,N)) + 1j * np.random.normal(0, std, size=(L,N))
+    pilots = np.random.normal(0, std, size=(L,K)) + 1j * np.random.normal(0, std, size=(L,K))
     norms = np.linalg.norm(pilots, axis=0)
-    p_n = pilots/norms
-    return p_n
+    a_n = pilots/norms
+    column_idx = np.random.randint(K, size=N)
+    a_n_active = a_n[:, column_idx[:N]]
+    return a_n, a_n_active, column_idx
 
-def get_ICBP_pilots(filename):
+def get_ICBP_pilots(filename, active_idx):
+    N = len(active_idx)
     vars = sio.loadmat(filename)
     A_ICBP = vars['X']
     coherence = vars['muX'][0][0]
-    return A_ICBP, coherence
+    A_ICBP_active = A_ICBP[:, active_idx[:N]]
+    return A_ICBP, A_ICBP_active, coherence
 
 def simulate_noise(snr, L, M):
     s_lin = 10 ** (snr / 10)
