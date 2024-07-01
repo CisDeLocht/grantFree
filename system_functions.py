@@ -1,5 +1,5 @@
 import numpy as np
-import scipy as sp
+import scipy.linalg as linalg
 import scipy.io as sio
 
 def populate_cell(grid, sparsity):
@@ -34,7 +34,7 @@ def generate_correlated_shadow_fading(distance_matrix, sigma):
     eps = 1e-10
     SF_uncorrelated = np.random.normal(0, sigma, distance_matrix.shape[0])
     correlation_matrix = 16 * 2**(-distance_matrix/9)
-    ret_val = sp.linalg.ldl(correlation_matrix)
+    ret_val = linalg.ldl(correlation_matrix)
     L = ret_val[0]
     D = ret_val[1]
     D[np.abs(D) < eps] = 0
