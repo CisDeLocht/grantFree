@@ -1,27 +1,65 @@
 import numpy as np
-from system_functions import generate_gaussian_pilots
+from system_functions import *
 
+def calculate_coherence(A):
+    columns = A.shape[1]
+    v = []
+    for i in range(columns):
+        for j in range(columns):
+            if(i != j):
+                x_i = A[:,i]
+                x_j = A[:,j]
+                T = np.abs(np.conj(x_i).T @ x_j)
+                N = np.linalg.norm(x_i) * np.linalg.norm(x_j)
+                v.append(T/N)
+    return np.max(v)
+
+def find_largest_idx(h_n, index_set):
+    found = False
+    i = 0
+    idx = 100000000
+    sorted_indices = np.argsort(h_n)[::-1]
+    if (len(index_set)==0):
+        return sorted_indices[i]
+    else:
+        while(not found):
+            idx = sorted_indices[i]
+            if(np.in1d(idx, index_set)):
+                i += 1
+            else:
+                found = True
+        return idx
 
 def OMP(A, y, N_active):
     r = y
+    x_k = np.zeros(A.shape[1], dtype=complex)
     index_set = []
     for k in range(N_active):
-        h_k = A.T @ r
-        n_largest_indices = np.argpartition(np.abs(h_k), N_active)[-N_active:]
-        missing_indices = np.setdiff1d(n_largest_indices, index_set)
-        if len(missing_indices) > 0:
-            index_set.append(missing_indices[0])
-        else:
-            return index_set
-
+        h_k = np.conj(A.T) @ r
+        h_n = np.linalg.norm(h_k.reshape(h_k.shape[0], 1), axis=1)
+        index_set.append(find_largest_idx(h_n, index_set))
+        A_idx = A[:, index_set]
+        A_pinv = np.linalg.pinv(A_idx)
+        v = A_pinv @ y
+        x_k[index_set] = v
+        b_k = A @ x_k
+        r = y - b_k
+    return index_set
 
 
 
 
 if __name__ == "__main__":
-    N = 10
-    A, a, column_idx = generate_gaussian_pilots(12, N , 100)
+    N = 5
+    A, a, column_idx = get_gaussian_pilots("./pilots/gauss_12_100_set1.npy", N, 100)
+
+
+    B, b, c = get_ICBP_pilots("./pilots/ICBP_12_100.mat", N, 100)
     h = np.zeros(100)
     h[column_idx] = np.random.randn(N)
-    y = np.reshape(np.dot(A, h), (12,1))
-    print(y)
+    y = np.dot(A, h)
+    coherence = calculate_coherence(A)
+    c_B = calculate_coherence(B)
+    index_set = OMP(A, y, N)
+    print(np.sort(column_idx))
+    print(np.sort(index_set))

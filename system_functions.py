@@ -58,8 +58,14 @@ def generate_gaussian_pilots(L, N, K):
     a_n_active = a_n[:, column_idx[:N]]
     return a_n, a_n_active, column_idx
 
-def get_ICBP_pilots(filename, active_idx):
-    N = len(active_idx)
+def get_gaussian_pilots(filename, N, K):
+    a_n = np.load(filename)
+    active_idx = np.random.randint(K,size=N)
+    a_n_active = a_n[:, active_idx[:N]]
+    return a_n, a_n_active, active_idx
+
+def get_ICBP_pilots(filename, N, K):
+    active_idx = np.random.randint(K, size=N)
     vars = sio.loadmat(filename)
     A_ICBP = vars['X']
     coherence = vars['muX'][0][0]

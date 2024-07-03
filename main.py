@@ -1,8 +1,6 @@
-import numpy as np
-
 from system_functions import *
 from subspace_functions import *
-from tests import *
+from test.tests import *
 
 if __name__ == '__main__':
     #------------ Simulation Parameters --------------
@@ -15,7 +13,7 @@ if __name__ == '__main__':
     SNR = 10                                                                            #in dB
     Lp = 12                                                                             #Pilot sequence length L << N -> 12
     M = 12                                                                              #Nr of antennas
-    ICBP_file = "pilots.mat"
+    ICBP_file = "pilots/ICBP_12_100.mat"
     # ------------ System setup --------------
 
     grid, indices, indices_list, N = populate_cell(grid, sparsity)                      #N is active users
