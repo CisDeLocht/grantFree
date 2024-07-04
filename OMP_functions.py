@@ -46,11 +46,25 @@ def OMP(A, y, N_active):
         r = y - b_k
     return index_set
 
-
+def MMV_OMP(A, Y, N_active):
+    R = Y
+    X_K = np.zeros((A.shape[1], Y.shape[1]), dtype=complex)
+    index_set = []
+    for k in range(N_active):
+        H_K = np.conj(A.T) @ R
+        h_n = np.linalg.norm(H_K, axis=1)
+        index_set.append(find_largest_idx(h_n, index_set))
+        A_idx = A[:, index_set]
+        A_pinv = np.linalg.pinv(A_idx)
+        V = A_pinv @ Y
+        X_K[index_set] = V
+        B_K = A @ X_K
+        R = Y - B_K
+    return index_set
 
 
 if __name__ == "__main__":
-    N = 5
+    N = 4
     A, a, column_idx = get_gaussian_pilots("./pilots/gauss_12_100_set1.npy", N, 100)
 
 
@@ -61,5 +75,15 @@ if __name__ == "__main__":
     coherence = calculate_coherence(A)
     c_B = calculate_coherence(B)
     index_set = OMP(A, y, N)
+    y = np.reshape(y, (12,1))
+    mmv_index_set = MMV_OMP(A, y, N)
+
     print(np.sort(column_idx))
     print(np.sort(index_set))
+    print(np.sort(mmv_index_set))
+
+    H = np.zeros((100, 4))
+    H[column_idx] = np.random.randn(4)
+    Y = A @ H
+    mmv_index_set = MMV_OMP(A,Y,N)
+    print(np.sort(mmv_index_set))
