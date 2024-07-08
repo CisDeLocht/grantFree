@@ -7,7 +7,7 @@ def plot_signatures(signatures):
     plt.stem(x_axis, signatures)
     plt.show()
 
-def music(Y: np.ndarray, M: int, N: int, pilots: np.ndarray, plot: bool):
+def music(Y: np.ndarray, M: int, K: int, pilots: np.ndarray, plot: bool):
     Y_H = np.conj(Y.T)
     R_y = (Y @ Y_H)/M
     eigvals, Q = np.linalg.eig(R_y)
@@ -17,11 +17,11 @@ def music(Y: np.ndarray, M: int, N: int, pilots: np.ndarray, plot: bool):
     sorted_eigvals = eigvals[sort_idx]
     sorted_Q = Q[:, sort_idx]
 
-    Q_n = sorted_Q[:, -(Q.shape[1]-N):]
+    Q_n = sorted_Q[:, -(Q.shape[1]-K):]
     Q_n_H = np.conj(Q_n.T)
 
     signatures = 1 / (np.linalg.norm(Q_n_H @ pilots, axis=0)**2)
-    signature_idx = np.argpartition(signatures, -N)[-N:]
+    signature_idx = np.argpartition(signatures, -K)[-K:]
 
     if(plot):
         plot_signatures(signatures)
