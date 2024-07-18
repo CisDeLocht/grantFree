@@ -66,10 +66,10 @@ def MMV_OMP(A, Y, N_active):
 
 if __name__ == "__main__":
     K = 4
-    A, a, column_idx = get_gaussian_pilots("./pilots/gauss_12_100_set1.npy", 100,K)
+    A, a, column_idx = get_gaussian_pilots("pilots/gauss_6_100.npy", 100, K)
 
 
-    B, b, c = get_ICBP_pilots("./pilots/ICBP_12_100.mat", 100, K)
+    B, b = get_ICBP_pilots("./pilots/ICBP_12_100.mat", 100, K)
     h = np.zeros(100)
     h[column_idx] = np.random.randn(K)
     y = np.dot(A, h)
