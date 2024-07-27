@@ -5,19 +5,14 @@ from mytest.tests import *
 
 def populate_cell(grid, K):
     grid_size = grid.shape[0]
-    center = int((grid_size - 1) / 2)
     num_active = K
     if (num_active == 0):
         raise Exception("Active devices is zero, please increase sparsity")
 
-    indices = np.random.choice(grid_size ** 2, num_active, replace=False)
-    i, j = np.unravel_index(indices, (grid_size, grid_size))
-    grid[i, j] = 1
-    grid[center, center] = -1
+    i = np.random.randint(0, grid_size, num_active)
+    j = np.random.randint(0, grid_size, num_active)
     indices = np.column_stack((i, j))
-    indices_list = [tuple(index) for index in indices]
-
-    return grid, indices, indices_list, len(indices_list)
+    return grid, indices
 
 
 def calculate_distances(grid, indices, M, K):
@@ -26,9 +21,10 @@ def calculate_distances(grid, indices, M, K):
     center = int((grid_size - 1) / 2)
     center_index = np.array([center, center])
     distances2b_horizontal = np.asarray([np.linalg.norm(center_index - index) for index in indices])
-    distances2b = np.sqrt(distances2b_horizontal**2 + bs_height**2)                                                     #Pythagoras
-    IU_distance_matrix = np.array([[np.linalg.norm(indices[i] - indices[j]) for j in range(K)] for i in range(K)])      #Inter-User distances
-
+    distances2b = np.sqrt(distances2b_horizontal**2 + bs_height**2)                                                             #Pythagoras
+    IU_distance_matrix = np.zeros((K,K))
+    IU_distance_matrix[np.triu_indices(K,1)] = [np.linalg.norm(indices[i] - indices[j]) for i in range(K) for j in range(i+1, K)]      #Inter-User distances
+    IU_distance_matrix += IU_distance_matrix.T
     return distances2b, IU_distance_matrix
 
 def generate_correlated_shadow_fading(distance_matrix, sigma):
