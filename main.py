@@ -1,3 +1,5 @@
+import numpy as np
+
 from sim.detection_probability import *
 
 from enum import Enum
@@ -18,13 +20,13 @@ if __name__ == '__main__':
     #------------ Simulation Parameters --------------
     cell_radius = 500                                                                       #in meters
     N = 100
-    K = 8                                                                                 #N total users, K active users
+    K = 8                                                                               #N total users, K active users
     P = 1
     freq = 2                                                                            #in GHz
-    SNR = 1000                                                                           #in dB
+    SNR = 150                                                                           #in dB
     Lp = 12                                                                             #Pilot sequence length L << N -> 12
     M = 8                                                                               #Nr of antennas
-    s = 10000
+    s = 1000
     # ------------ Detection Probability vs. Active users --------------
     users = np.arange(15) + 1
     P_g_m = [None]*len(users)
@@ -51,93 +53,86 @@ if __name__ == '__main__':
                          callback=lambda res, idx=i: collect_result(res, P_I_o, IP_I_o, idx))
     pool.close()
     pool.join()
-        # p_g_m, ip_g_m = sim_detection_probability(N, k, M, P, Pilot.GAUSSIAN, Lp, cell_radius, SNR, "MUSIC", s)
-        # p_I_m, ip_I_m = sim_detection_probability(N, k, M,P,Pilot.ICBP, Lp, cell_radius, SNR, "MUSIC", s)
-        # p_g_o, ip_g_o = sim_detection_probability(N, k, M, P,Pilot.GAUSSIAN, Lp, cell_radius, SNR, "OMP", s)
-        # p_I_o, ip_I_o = sim_detection_probability(N, k, M, P,Pilot.ICBP, Lp, cell_radius, SNR, "OMP", s)
-        #
-        # P_g_m[i] = p_g_m
-        # P_g_o[i] = p_g_o
-        # P_I_m[i] = p_I_m
-        # P_I_o[i] = p_I_o
-        # IP_g_m[i] = ip_g_m
-        # IP_g_o[i] = ip_g_o
-        # IP_I_m[i] = ip_I_m
-        #IP_I_o[i] = ip_I_o
-
-    print("Execution time: %s seconds" % (time.time()-start_time))
+    print(IP_g_m)
+    print(IP_g_o)
+    print(IP_I_o)
+    print(IP_I_m)
+    print("Execution time for users: %s seconds" % (time.time()-start_time))
     plot_4detection_results(P_g_m, P_g_o, P_I_m, P_I_o, "MUSIC", "OMP", users, "Number of Active Users", " ")
-    plot_detailed_reliability(IP_g_m, IP_g_o, IP_I_m, IP_I_o, "MUSIC", "OMP", users, "Number of Active Users", " ")
+    plot_detailed_reliability(IP_g_m, IP_g_o, IP_I_m, IP_I_o, "MUSIC", "OMP", users, "Number of Active Users", " ", x_log=False)
     # ------------ Detection Probability vs. Antenna's --------------
-    # P_g_m = []
-    # P_g_o = []
-    # P_I_m = []
-    # P_I_o = []
-    # antennas = np.asarray([4, 8, 12, 16, 32, 48, 64])
-    # for a in antennas:
-    #     p_g_m = sim_detection_probability(N, K, a, P, Pilot.GAUSSIAN, Lp, cell_radius, SNR, "MUSIC", s)
-    #     p_I_m = sim_detection_probability(N, K, a, P,Pilot.ICBP, Lp, cell_radius, SNR, "MUSIC", s)
-    #     p_g_o = sim_detection_probability(N, K, a, P,Pilot.GAUSSIAN, Lp, cell_radius, SNR, "OMP", s)
-    #     p_I_o = sim_detection_probability(N, K, a, P,Pilot.ICBP, Lp, cell_radius, SNR, "OMP", s)
-    #
-    #     P_g_m.append(p_g_m)
-    #     P_g_o.append(p_g_o)
-    #     P_I_m.append(p_I_m)
-    #     P_I_o.append(p_I_o)
-    #
-    # plot_detection_results(P_g_m, "MUSIC", Pilot.GAUSSIAN, antennas, "Number of Antenna's", " ")
-    # plot_detection_results(P_g_o, "OMP", Pilot.GAUSSIAN, antennas, "Number of Antenna's", " ")
-    # plot_detection_results(P_I_m, "MUSIC", Pilot.ICBP, antennas, "Number of Antenna's", " ")
-    # plot_detection_results(P_I_o, "OMP", Pilot.ICBP, antennas, "Number of Antenna's", " ")
-    #
-    # plot_2detection_results(P_g_m, P_g_o, "MUSIC", "OMP", Pilot.GAUSSIAN, antennas, "Number of Antenna's", " ")
-    # plot_2detection_results(P_I_m, P_I_o, "MUSIC", "OMP", Pilot.ICBP, antennas, "Number of Antenna's", " ")
+    antennas = np.arange(24)+1
+    P_g_m, P_g_o, P_I_m, P_I_o, IP_g_m, IP_g_o, IP_I_m, IP_I_o = reset_lists(P_g_m, P_g_o, P_I_m, P_I_o, IP_g_m, IP_g_o, IP_I_m, IP_I_o, len(antennas))
+    start_time = time.time()
+    pool = multiprocessing.Pool(processes=4)
+    for i, a in enumerate(antennas):
+        pool.apply_async(worker,
+                         (sim_detection_probability, N, K, a, P, Pilot.GAUSSIAN, Lp, cell_radius, SNR, "MUSIC", s),
+                         callback=lambda res, idx=i: collect_result(res, P_g_m, IP_g_m, idx))
+        pool.apply_async(worker,
+                         (sim_detection_probability, N, K, a, P, Pilot.ICBP, Lp, cell_radius, SNR, "MUSIC", s),
+                         callback=lambda res, idx=i: collect_result(res, P_I_m, IP_I_m, idx))
+        pool.apply_async(worker,
+                         (sim_detection_probability, N, K, a, P, Pilot.GAUSSIAN, Lp, cell_radius, SNR, "OMP", s),
+                         callback=lambda res, idx=i: collect_result(res, P_g_o, IP_g_o, idx))
+        pool.apply_async(worker,
+                         (sim_detection_probability, N, K, a, P, Pilot.ICBP, Lp, cell_radius, SNR, "OMP", s),
+                         callback=lambda res, idx=i: collect_result(res, P_I_o, IP_I_o, idx))
+    pool.close()
+    pool.join()
+
+    print("Execution time for antennas: %s seconds" % (time.time() - start_time))
+    #plot_4detection_results(P_g_m, P_g_o, P_I_m, P_I_o, "MUSIC", "OMP", antennas, "Number of Antennas", " ")
+    plot_detailed_reliability(IP_g_m, IP_g_o, IP_I_m, IP_I_o, "MUSIC", "OMP", antennas, "Number of Antennas", " ", x_log=False)
 
     # ------------ Detection Probability vs. Pilot Length --------------
-    # P_g_m = []
-    # P_g_o = []
-    # P_I_m = []
-    # P_I_o = []
-    # pilot_lengths = np.asarray([6, 12, 18, 24, 32, 48, 64])
-    # for l in pilot_lengths:
-    #     p_g_m = sim_detection_probability(N, K, M, P, Pilot.GAUSSIAN, l, cell_radius, SNR, "MUSIC", s)
-    #     p_I_m = sim_detection_probability(N, K, M, P, Pilot.ICBP, l, cell_radius, SNR, "MUSIC", s)
-    #     p_g_o = sim_detection_probability(N, K, M, P, Pilot.GAUSSIAN, l, cell_radius, SNR, "OMP", s)
-    #     p_I_o = sim_detection_probability(N, K, M, P, Pilot.ICBP, l, cell_radius, SNR, "OMP", s)
-    #
-    #     P_g_m.append(p_g_m)
-    #     P_g_o.append(p_g_o)
-    #     P_I_m.append(p_I_m)
-    #     P_I_o.append(p_I_o)
-    #
-    # plot_detection_results(P_g_m, "MUSIC", Pilot.GAUSSIAN, pilot_lengths, "Pilot Length", " ")
-    # plot_detection_results(P_g_o, "OMP", Pilot.GAUSSIAN, pilot_lengths, "Pilot Length", " ")
-    # plot_detection_results(P_I_m, "MUSIC", Pilot.ICBP, pilot_lengths, "Pilot Length", " ")
-    # plot_detection_results(P_I_o, "OMP", Pilot.ICBP, pilot_lengths, "Pilot Length", " ")
-    #
-    # plot_2detection_results(P_g_m, P_g_o, "MUSIC", "OMP", Pilot.GAUSSIAN, pilot_lengths, "Pilot Length", " ")
-    # plot_2detection_results(P_I_m, P_I_o, "MUSIC", "OMP", Pilot.ICBP, pilot_lengths, "Pilot Length", " ")
+    pilot_lengths = np.asarray([6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 32, 48])
+    P_g_m, P_g_o, P_I_m, P_I_o, IP_g_m, IP_g_o, IP_I_m, IP_I_o = reset_lists(P_g_m, P_g_o, P_I_m, P_I_o, IP_g_m, IP_g_o, IP_I_m, IP_I_o, len(pilot_lengths))
+    start_time = time.time()
+    pool = multiprocessing.Pool(processes=4)
+    for i, l in enumerate(pilot_lengths):
+        pool.apply_async(worker,
+                         (sim_detection_probability, N, K, M, P, Pilot.GAUSSIAN, l, cell_radius, SNR, "MUSIC", s),
+                         callback=lambda res, idx=i: collect_result(res, P_g_m, IP_g_m, idx))
+        pool.apply_async(worker,
+                         (sim_detection_probability, N, K, M, P, Pilot.ICBP, l, cell_radius, SNR, "MUSIC", s),
+                         callback=lambda res, idx=i: collect_result(res, P_I_m, IP_I_m, idx))
+        pool.apply_async(worker,
+                         (sim_detection_probability, N, K, M, P, Pilot.GAUSSIAN, l, cell_radius, SNR, "OMP", s),
+                         callback=lambda res, idx=i: collect_result(res, P_g_o, IP_g_o, idx))
+        pool.apply_async(worker,
+                         (sim_detection_probability, N, K, M, P, Pilot.ICBP, l, cell_radius, SNR, "OMP", s),
+                         callback=lambda res, idx=i: collect_result(res, P_I_o, IP_I_o, idx))
+    pool.close()
+    pool.join()
+
+    print("Execution time for pilots: %s seconds" % (time.time() - start_time))
+    #plot_4detection_results(P_g_m, P_g_o, P_I_m, P_I_o, "MUSIC", "OMP", pilot_lengths, "Pilot Length", " ")
+    plot_detailed_reliability(IP_g_m, IP_g_o, IP_I_m, IP_I_o, "MUSIC", "OMP", pilot_lengths, "Pilot Length", " ", x_log=False)
+
     # ------------ Detection Probability vs. Tx Power --------------
-    # P_g_m = []
-    # P_g_o = []
-    # P_I_m = []
-    # P_I_o = []
-    # SNR = np.asarray([1, 10, 50, 100, 200, 400, 800, 1000])
-    # for snr in SNR:
-    #     p_g_m = sim_detection_probability(N, K, M, P, Pilot.GAUSSIAN, Lp, cell_radius, snr, "MUSIC", s)
-    #     p_I_m = sim_detection_probability(N, K, M, P, Pilot.ICBP, Lp, cell_radius, snr, "MUSIC", s)
-    #     p_g_o = sim_detection_probability(N, K, M, P, Pilot.GAUSSIAN, Lp, cell_radius, snr, "OMP", s)
-    #     p_I_o = sim_detection_probability(N, K, M, P, Pilot.ICBP, Lp, cell_radius, snr, "OMP", s)
-    #
-    #     P_g_m.append(p_g_m)
-    #     P_g_o.append(p_g_o)
-    #     P_I_m.append(p_I_m)
-    #     P_I_o.append(p_I_o)
-    #
-    # plot_detection_results(P_g_m, "MUSIC", Pilot.GAUSSIAN, SNR, "SNR", "")
-    # plot_detection_results(P_g_o, "OMP", Pilot.GAUSSIAN, SNR, "SNR", "")
-    # plot_detection_results(P_I_m, "MUSIC", Pilot.ICBP, SNR, "SNR", "")
-    # plot_detection_results(P_I_o, "OMP", Pilot.ICBP, SNR, "SNR", "")
-    #
-    # plot_2detection_results(P_g_m, P_g_o, "MUSIC", "OMP", Pilot.GAUSSIAN, SNR, "SNR", "")
-    # plot_2detection_results(P_I_m, P_I_o, "MUSIC", "OMP", Pilot.ICBP, SNR, "SNR", "")
+
+    SNR_list = np.asarray([1, 10, 25, 50, 75, 100, 150, 200, 300, 400, 500])
+    P_g_m, P_g_o, P_I_m, P_I_o, IP_g_m, IP_g_o, IP_I_m, IP_I_o = reset_lists(P_g_m, P_g_o, P_I_m, P_I_o, IP_g_m, IP_g_o, IP_I_m, IP_I_o, len(SNR_list))
+    start_time = time.time()
+    pool = multiprocessing.Pool(processes=4)
+    for i, snr in enumerate(SNR_list):
+        pool.apply_async(worker,
+                         (sim_detection_probability, N, K, M, P, Pilot.GAUSSIAN, Lp, cell_radius, snr, "MUSIC", s),
+                         callback=lambda res, idx=i: collect_result(res, P_g_m, IP_g_m, idx))
+        pool.apply_async(worker,
+                         (sim_detection_probability, N, K, M, P, Pilot.ICBP, Lp, cell_radius, snr, "MUSIC", s),
+                         callback=lambda res, idx=i: collect_result(res, P_I_m, IP_I_m, idx))
+        pool.apply_async(worker,
+                         (sim_detection_probability, N, K, M, P, Pilot.GAUSSIAN, Lp, cell_radius, snr, "OMP", s),
+                         callback=lambda res, idx=i: collect_result(res, P_g_o, IP_g_o, idx))
+        pool.apply_async(worker,
+                         (sim_detection_probability, N, K, M, P, Pilot.ICBP, Lp, cell_radius, snr, "OMP", s),
+                         callback=lambda res, idx=i: collect_result(res, P_I_o, IP_I_o, idx))
+    pool.close()
+    pool.join()
+
+    print("Execution time for SNR: %s seconds" % (time.time() - start_time))
+    #plot_4detection_results(P_g_m, P_g_o, P_I_m, P_I_o, "MUSIC", "OMP", SNR_list, "Transmit SNR", "[dB]")
+    plot_detailed_reliability(IP_g_m, IP_g_o, IP_I_m, IP_I_o, "MUSIC", "OMP", SNR_list, "Transmit SNR", "[dB]", x_log=True)
+

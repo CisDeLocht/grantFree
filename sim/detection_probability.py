@@ -8,6 +8,18 @@ from enum import Enum
 class Pilot(Enum):
     GAUSSIAN = 0
     ICBP = 1
+
+def reset_lists(l1, l2, l3, l4, l5, l6, l7, l8, size):
+    l1 = [None]*size
+    l2 = [None]*size
+    l3 = [None]*size
+    l4 = [None]*size
+    l5 = [None]*size
+    l6 = [None]*size
+    l7 = [None]*size
+    l8 = [None]*size
+    return l1, l2, l3, l4, l5, l6, l7, l8
+
 def sim_detection_probability(N, K, M , P ,p_type, p_length, cell_radius, SNR, method, s) -> tuple:
     """
     Function to simulate detection probability
@@ -61,8 +73,8 @@ def sim_detection_probability(N, K, M , P ,p_type, p_length, cell_radius, SNR, m
 
         if(len(np.setdiff1d(active_idx, estimate_idx)) == 0):
             detection += 1
-    correct_detection = detection/s *100
-    incorrect_detection = 100 - correct_detection
+    correct_detection = detection/s
+    incorrect_detection = 1 - correct_detection
     return correct_detection, incorrect_detection
 
 def plot_detection_results(probabilities, method, p_type, x, x_name, x_unit):
@@ -78,22 +90,28 @@ def plot_4detection_results(prob1, prob2, prob1_icbp, prob2_icbp, method1, metho
     plt.plot(x, prob1_icbp, "--b", label=method1 + " [ICBP]")
     plt.plot(x, prob2_icbp, "--r", label=method2 + " [ICBP]")
     plt.xlabel(x_name + x_unit)
-    plt.ylabel("Probability [%]")
+    plt.ylabel("Probability")
+    plt.yscale("log")
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5, color='lightgray')
     plt.title("Correct Detection Probability vs. " + x_name)
     plt.legend(loc="upper right")
+    plt.xticks(x)
     plt.show()
 
-def plot_detailed_reliability(prob1, prob2, prob1_icbp, prob2_icbp, method1, method2, x, x_name, x_unit):
+def plot_detailed_reliability(prob1, prob2, prob1_icbp, prob2_icbp, method1, method2, x, x_name, x_unit, x_log: bool):
     plt.plot(x, prob1, "-b", label=method1 + " [Gaussian]")
     plt.plot(x, prob2, "-r", label=method2 + " [Gaussian]")
     plt.plot(x, prob1_icbp, "--b", label=method1 + " [ICBP]")
     plt.plot(x, prob2_icbp, "--r", label=method2 + " [ICBP]")
     plt.xlabel(x_name + x_unit)
-    plt.ylabel("Probability [%]")
+    plt.ylabel("Probability")
+    if(x_log):
+        plt.xscale("log")
     plt.yscale("log")
-    plt.ylim(0.001, 102)
+    plt.ylim(0.001, 2)
     plt.title("Detailed Incorrect Detection Probability vs. " + x_name)
-    plt.legend(loc="upper left")
+    plt.legend(loc="lower right")
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5, color='lightgray')
     plt.show()
 
 
