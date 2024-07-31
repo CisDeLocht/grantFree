@@ -1,6 +1,7 @@
 import numpy as np
 from system_functions import *
-
+import math
+import scipy.special
 def calculate_coherence(A):
     columns = A.shape[1]
     v = []
@@ -65,26 +66,10 @@ def MMV_OMP(A, Y, N_active):
 
 
 if __name__ == "__main__":
-    K = 4
-    A, a, column_idx = get_gaussian_pilots("pilots/gauss_6_100.npy", 100, K)
 
+    n = 100
+    max_k = 16
 
-    B, b = get_ICBP_pilots("./pilots/ICBP_12_100.mat", 100, K)
-    h = np.zeros(100)
-    h[column_idx] = np.random.randn(K)
-    y = np.dot(A, h)
-    coherence = calculate_coherence(A)
-    c_B = calculate_coherence(B)
-    index_set = OMP(A, y, K)
-    y = np.reshape(y, (12,1))
-    mmv_index_set = MMV_OMP(A, y, K)
-
-    print(np.sort(column_idx))
-    print(np.sort(index_set))
-    print(np.sort(mmv_index_set))
-
-    H = np.zeros((K, 4))
-    H = np.random.randn(K,4)
-    Y = A[:, column_idx] @ H
-    mmv_index_set = MMV_OMP(A,Y,K)
-    print(np.sort(mmv_index_set))
+    total_combinations = sum(scipy.special.comb(n,k) for k in range(1, max_k + 1))
+    print(total_combinations)
+    print(scipy.special.comb(100, 8))
