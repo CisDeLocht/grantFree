@@ -109,7 +109,7 @@ def plot_detailed_reliability(prob1, prob2, prob1_icbp, prob2_icbp, method1, met
         plt.xscale("log")
     plt.yscale("log")
     plt.ylim(0.001, 2)
-    plt.title("Detailed Incorrect Detection Probability vs. " + x_name)
+    plt.title("Incorrect Detection Probability vs. " + x_name)
     plt.legend(loc="lower right")
     plt.grid(True, which='both', linestyle='--', linewidth=0.5, color='lightgray')
     plt.show()
