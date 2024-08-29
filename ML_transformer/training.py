@@ -20,7 +20,7 @@ def train_loop(dataloader, model, loss_fn, optimizer, device):
 
     train_loss += loss.item()
     s_pred = torch.sigmoid(pred)
-    b_pred = (s_pred>0.3).type(torch.float)
+    b_pred = (s_pred>0.5).type(torch.float)
     matches = (b_pred == y.to(device))
     num_matches = matches.sum().item()
     total_elements = b_pred.numel()
@@ -71,6 +71,8 @@ def start_training(epochs, train_loader, test_loader, model, loss_fn, optimizer,
 
   for t in range(epochs):
     print(f"Epoch {t + 1}\n-------------------------------")
+    if(t==4):
+      print(t)
     train_loss, train_acc = train_loop(train_loader,
                                        model,
                                        loss_fn,

@@ -9,6 +9,7 @@ def populate_cell(grid, K):
     if (num_active == 0):
         raise Exception("Active devices is zero, please increase sparsity")
 
+
     i = np.random.randint(0, grid_size, num_active)
     j = np.random.randint(0, grid_size, num_active)
     indices = np.column_stack((i, j))
