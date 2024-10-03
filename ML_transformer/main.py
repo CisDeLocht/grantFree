@@ -33,18 +33,22 @@ if __name__ == "__main__":
     num_classes = dataset.getNumClasses()
     dim = (N,M)
 
+
+    GF_Classifier = GrantFreeTransformer(m_size=dim, in_chans=3, embed_dim=256, depth=6, num_heads=8, num_classes=num_classes,
+                                         mlp_ratio=4, qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6))
+
     ViT_Classifier = VisionTransformer(
-        img_size=dim, patch_size=(5,4), in_chans=3,embed_dim=256, depth=8, num_heads=8, num_classes=num_classes,
+        img_size=dim, patch_size=(4,4), in_chans=3,embed_dim=256, depth=2, num_heads=8, num_classes=num_classes,
         mlp_ratio=4, qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6))
 
-    lr = 0.01
+    lr = 0.0001
     epochs = 10
-    pos_weight = 12
+    pos_weight = 3
     reg_weight = 0.1
     base_loss_function = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(pos_weight)) #This takes care of the sigmoid already and is numerically more stable according to copilot
-    loss_function = CustomLoss(base_loss_function, K, reg_weight=reg_weight)
-    optimizer = torch.optim.Adam(ViT_Classifier.parameters(), lr=lr, weight_decay=0.01)
+    loss_function = CustomLoss1(base_loss=base_loss_function, target_active_labels=K, reg_weight=reg_weight)
+    optimizer = torch.optim.AdamW(GF_Classifier.parameters(), lr=lr, weight_decay=0.01)
 
-    start_training(epochs, train_loader, test_loader, ViT_Classifier, loss_function, optimizer, device)
+    start_training(epochs, train_loader, test_loader, GF_Classifier, loss_function, optimizer, device)
 

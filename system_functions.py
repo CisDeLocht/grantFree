@@ -1,7 +1,13 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import scipy.linalg as linalg
 import scipy.io as sio
 from mytest.tests import *
+
+def populate_cell_radius(radius, margin,K):
+    x, y = generate_positions(radius, margin, K)
+    pos = np.column_stack((x, y))
+    return pos
 
 def populate_cell(grid, K):
     grid_size = grid.shape[0]
@@ -13,8 +19,20 @@ def populate_cell(grid, K):
     i = np.random.randint(0, grid_size, num_active)
     j = np.random.randint(0, grid_size, num_active)
     indices = np.column_stack((i, j))
+    x, y = generate_positions((grid_size-1)/2, 10, num_active)
+    pos = np.column_stack((x,y))
     return grid, indices
 
+
+def calculate_distances_radius(indices, K):
+    bs_height = 10
+    center_index = np.array([0, 0])
+    distances2b_horizontal = np.asarray([np.linalg.norm(center_index - index) for index in indices])
+    distances2b = np.sqrt(distances2b_horizontal**2 + bs_height**2)                                                             #Pythagoras
+    IU_distance_matrix = np.zeros((K,K))
+    IU_distance_matrix[np.triu_indices(K,1)] = [np.linalg.norm(indices[i] - indices[j]) for i in range(K) for j in range(i+1, K)]      #Inter-User distances
+    IU_distance_matrix += IU_distance_matrix.T
+    return distances2b, IU_distance_matrix
 
 def calculate_distances(grid, indices, M, K):
     bs_height = 10
@@ -77,11 +95,57 @@ def simulate_noise(snr, L, M):
     n = np.random.normal(0, n_std, size=(L, M)) + 1j * np.random.normal(0, n_std, size=(L, M))
     return n
 
+
+def generate_positions(radius, margin, num_points):
+    # Define the range for the radius
+    min_radius = radius - margin
+    max_radius = radius + margin
+
+    # Generate random radii and angles
+    radii = np.random.uniform(min_radius, max_radius, num_points)
+    angles = np.random.uniform(0, 2 * np.pi, num_points)
+
+    # Convert polar coordinates to Cartesian coordinates
+    x_positions = radii * np.cos(angles)
+    y_positions = radii * np.sin(angles)
+
+    return np.rint(x_positions).astype(np.int32), np.rint(y_positions).astype(np.int32)
+
+
+def plot_positions(x, y):
+    plt.figure(figsize=(8, 8))
+    plt.scatter(x, y, s=10, c='blue', alpha=0.6)
+    plt.xlabel('X Position (m)')
+    plt.ylabel('Y Position (m)')
+    plt.title('User Positions on a Circle')
+    plt.grid(True)
+    plt.axis('equal')
+    plt.show()
+
+
 if __name__ == "__main__":
-    L = np.asarray([8, 10, 14, 16, 20, 22])
-    for l in L:
-        codebook, _, _ = generate_gaussian_pilots(l, 100, 5)
-        string = "./pilots/gauss_" + str(l) + "_100"
-        check = TEST_normed(codebook)
-        if(check):
-            np.save(string, codebook)
+    K = 8
+    grid_size = 201
+
+    populate_cell(np.zeros((grid_size, grid_size)), K)
+    # Example usage
+    radius = 100
+    margin = 20
+    num_points = 1000
+    x, y = generate_positions(radius, margin, num_points)
+
+    # Plot the positions
+    plot_positions(x, y)
+    _, indices = populate_cell(np.zeros((grid_size, grid_size)), 200)
+    plot_positions(indices[:,0], indices[:,1])
+    pos = populate_cell_radius(radius, margin, 200)
+    plot_positions(pos[:,0], pos[:,1])
+
+    idx_r = np.asarray([[0, 100], [50, 50], [-30, 80]])
+    idx = np.asarray([[100, 200], [150, 150], [70, 180]])
+
+    d2b_r = calculate_distances_radius(idx_r, 3)
+    d2b = calculate_distances(grid=np.zeros([201, 201]), M=2, indices=idx, K=3)
+
+    print(d2b_r)
+    print(d2b)

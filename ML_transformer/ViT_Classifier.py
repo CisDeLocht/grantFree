@@ -94,6 +94,69 @@ class Block(nn.Module):
         x = x + self.drop_path(self.mlp(self.norm2(x)))
         return x
 
+class MatchedFilterEmbedding(nn.Module):
+
+    def __init__(self,m_size = (100,8), in_chans=3, embed_dim=256, norm_layer = None):
+            super().__init__()
+            self.m_size = m_size
+            self.proj = nn.Linear(m_size[1]*in_chans, embed_dim)
+            self.norm = norm_layer(embed_dim) if norm_layer is not None else nn.Identity()
+
+    def forward(self, x):
+        B, H, W = x.shape
+        x = self.proj(x)
+        x = self.norm(x)
+        return x
+
+class GrantFreeTransformer(nn.Module):
+
+    def __init__(self, m_size=(100,8), in_chans=3, num_classes=100, embed_dim=256, depth=8,
+                 num_heads=8, mlp_ratio=4., qkv_bias=True, qk_scale=None, representation_size=None,
+                 drop_rate=0., attn_drop_rate=0., drop_path_rate=0., norm_layer=None, inference=False):
+
+        super().__init__()
+        self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
+        norm_layer = norm_layer or partial(nn.LayerNorm, eps=1e-6)
+
+        self.input_embedding = MatchedFilterEmbedding(m_size, in_chans, embed_dim, norm_layer)
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
+
+        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
+        self.blocks = nn.ModuleList([
+            Block(
+                dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, qk_scale=qk_scale,
+                drop=drop_rate, attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer)
+            for i in range(depth)])
+        self.norm = norm_layer(embed_dim)
+        trunc_normal_(self.cls_token, std=.02)
+        self.apply(self._init_weights)
+
+        self.classifier = nn.Linear(in_features=embed_dim, out_features=num_classes)
+        self.inference = inference
+        self.dim = m_size
+
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            trunc_normal_(m.weight, std=.02)
+            if isinstance(m, nn.Linear) and m.bias is not None:
+                nn.init.constant_(m.bias, 0)
+        elif isinstance(m, nn.LayerNorm):
+            nn.init.constant_(m.bias, 0)
+            nn.init.constant_(m.weight, 1.0)
+
+    def forward(self, x, register_blk=-1):
+        B = x.shape[0]
+        x = self.input_embedding(x)
+
+        cls_tokens = self.cls_token.expand(B, -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
+        x = torch.cat((cls_tokens, x), dim=1)
+
+        for i, blk in enumerate(self.blocks):
+            x = blk(x, register_blk == i)
+        x = self.norm(x)
+        pred = self.classifier(x[:, 0])             #Only use class token for classification
+        return x, pred
+
 
 class VisionTransformer(nn.Module):
     """ Vision Transformer

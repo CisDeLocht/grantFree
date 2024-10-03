@@ -39,6 +39,7 @@ class GF_dataset(Dataset):
 
         multi_label_idx = np.zeros(self.numclasses, dtype=float)
         multi_label_idx[active_idx] = 1
+        Y_tensor = Y_tensor.transpose(0, 1).flatten(1)
         return Y_tensor, torch.tensor(multi_label_idx).float()
 
 
@@ -66,9 +67,9 @@ class GF_dataset(Dataset):
         Y_n = np.stack((Y_r_n, Y_i_n, Y_abs), axis=0)
         return Y_n
 
-class CustomLoss(nn.Module):
+class CustomLoss1(nn.Module):
     def __init__(self, base_loss, target_active_labels, reg_weight=1.0):
-        super(CustomLoss, self).__init__()
+        super(CustomLoss1, self).__init__()
         self.base_loss = base_loss
         self.target_active_labels = target_active_labels
         self.reg_weight = reg_weight
@@ -76,10 +77,29 @@ class CustomLoss(nn.Module):
     def forward(self, outputs, targets):
         base_loss = self.base_loss(outputs, targets)
         predicted_active_labels = torch.sum(outputs > 0.5, dim=1).float()
+        predicted_active_labels2 = torch.sum(torch.sigmoid(outputs), dim=1)
         regularization_loss = torch.mean((predicted_active_labels - self.target_active_labels) ** 2)
         return base_loss + self.reg_weight * regularization_loss
 
+class CustomLoss2(nn.Module):
+    def __init__(self, penalty_factor=2.0, reg_factor = 1.0):
+        super(CustomLoss2, self).__init__()
+        self.bce_loss = nn.BCEWithLogitsLoss()
+        self.penalty_factor = penalty_factor
+        self.reg_factor = reg_factor
 
+    def forward(self, outputs, targets):
+        target_active_labels = torch.sum(targets == 1, dim=1).float()
+        bce = self.bce_loss(outputs, targets)
+
+        sigmoid_output = torch.sigmoid(outputs)
+        false_negatives = (targets * (1 - sigmoid_output)).sum()
+        penalty = self.penalty_factor * false_negatives
+
+        predicted_active_labels = torch.sum(sigmoid_output > 0.5, dim=1).float()
+        predicted_active_labels.requires_grad_(True)
+        regularization_loss = self.reg_factor * torch.mean((predicted_active_labels - target_active_labels) ** 2)
+        return bce + regularization_loss + penalty
 
 if __name__ == "__main__":
     cell_radius = 500  # in meters
@@ -95,6 +115,6 @@ if __name__ == "__main__":
     A, _ = get_ICBP_pilots(path, N, K)
 
     dataset = GF_dataset(A, K, M, P, SNR, cell_radius, freq, 1000)
-    dataset.__getitem__(5)
+    look = dataset.__getitem__(5)
     print(dataset.getNumClasses())
 
