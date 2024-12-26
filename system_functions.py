@@ -1,4 +1,6 @@
 import numpy as np
+import os
+import matplotlib
 import matplotlib.pyplot as plt
 import scipy.linalg as linalg
 import scipy.io as sio
@@ -49,13 +51,19 @@ def calculate_distances(grid, indices, M, K):
 def generate_correlated_shadow_fading(distance_matrix, sigma):
     eps = 1e-10
     SF_uncorrelated = np.random.normal(0, sigma, distance_matrix.shape[0])
+    Rx = np.exp(- (np.abs(distance_matrix)/13))
     correlation_matrix = 16 * 2**(-distance_matrix/9)
     ret_val = linalg.ldl(correlation_matrix)
+    val = linalg.ldl(Rx)
+    l = val[0]
+    d = val[1]
+    d[np.abs(d) < eps] = 0
+    sf = l @ np.sqrt(d) @ SF_uncorrelated
     L = ret_val[0]
     D = ret_val[1]
     D[np.abs(D) < eps] = 0
     SF = L @ np.sqrt(D) @ SF_uncorrelated
-    return SF
+    return sf
 def simulate_path_loss_rayleigh(d2b, dm, M, K, P, f):
     UMC_PL = 36.7*np.log10(d2b) + 22.7 + 26*np.log10(f)
     SF = generate_correlated_shadow_fading(dm, 4)
@@ -102,7 +110,7 @@ def generate_positions(radius, margin, num_points):
     max_radius = radius + margin
 
     # Generate random radii and angles
-    radii = np.random.uniform(min_radius, max_radius, num_points)
+    radii =np.sqrt(np.random.uniform(min_radius**2, max_radius**2, num_points))
     angles = np.random.uniform(0, 2 * np.pi, num_points)
 
     # Convert polar coordinates to Cartesian coordinates
@@ -122,30 +130,35 @@ def plot_positions(x, y):
     plt.axis('equal')
     plt.show()
 
+def create_sample(N, K, M , P ,p_type, p_length, cell_radius, margin, SNR):
+    f = 2
+    detection = 0
+    root = os.path.abspath("..")
+    if (p_type.value == 0):
+        path = os.path.join(root, "grantFree/pilots", "gauss_" + str(p_length) + "_100.npy")
+        A, _, _ = get_gaussian_pilots(path, N, K)
+    else:
+        path = os.path.join(root, "grantFree/pilots", "ICBP_" + str(p_length) + "_100.mat")
+        A, _ = get_ICBP_pilots(path, N, K)
+
+    indices = populate_cell_radius(cell_radius, margin, K)
+
+    distances2b, distance_matrix = calculate_distances_radius(indices, K)
+
+    H = simulate_path_loss_rayleigh(distances2b, distance_matrix, M, K, P, f)
+
+    No = simulate_noise(SNR, p_length, M)
+
+    active_idx = np.random.randint(N, size=K)
+    A_active = A[:, active_idx[:K]]
+
+    Y = A_active @ H + No
+    Y_mf = np.conj(A.T) @ Y
+    return Y, Y_mf, active_idx
 
 if __name__ == "__main__":
-    K = 8
-    grid_size = 201
-
-    populate_cell(np.zeros((grid_size, grid_size)), K)
-    # Example usage
-    radius = 100
-    margin = 20
-    num_points = 1000
-    x, y = generate_positions(radius, margin, num_points)
-
-    # Plot the positions
-    plot_positions(x, y)
-    _, indices = populate_cell(np.zeros((grid_size, grid_size)), 200)
-    plot_positions(indices[:,0], indices[:,1])
-    pos = populate_cell_radius(radius, margin, 200)
+    margin = 240
+    cell_radius = 250
+    K = 10000
+    pos = populate_cell_radius(cell_radius, margin, K)
     plot_positions(pos[:,0], pos[:,1])
-
-    idx_r = np.asarray([[0, 100], [50, 50], [-30, 80]])
-    idx = np.asarray([[100, 200], [150, 150], [70, 180]])
-
-    d2b_r = calculate_distances_radius(idx_r, 3)
-    d2b = calculate_distances(grid=np.zeros([201, 201]), M=2, indices=idx, K=3)
-
-    print(d2b_r)
-    print(d2b)

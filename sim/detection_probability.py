@@ -20,7 +20,7 @@ def reset_lists(l1, l2, l3, l4, l5, l6, l7, l8, size):
     l8 = [None]*size
     return l1, l2, l3, l4, l5, l6, l7, l8
 
-def sim_detection_probability(N, K, M , P ,p_type, p_length, cell_radius, SNR, method, s) -> tuple:
+def sim_detection_probability(N, K, M , P ,p_type, p_length, cell_radius, margin ,SNR, method, s) -> tuple:
     """
     Function to simulate detection probability
     :Parameters:
@@ -41,18 +41,16 @@ def sim_detection_probability(N, K, M , P ,p_type, p_length, cell_radius, SNR, m
     detection = 0
     root = os.path.abspath("..")
     if (p_type.value == 0):
-        path = os.path.join(root, "grantFree/pilots", "gauss_" + str(p_length)+ "_100.npy")
+        path = os.path.join(root, "grantFree/pilots", "gauss_" + str(p_length)+ "_48.npy")
         A, _, _ = get_gaussian_pilots(path, N, K)
     else:
-        path = os.path.join(root, "grantFree/pilots", "ICBP_" +str(p_length)+"_100.mat")
+        path = os.path.join(root, "grantFree/pilots", "ICBP_" +str(p_length)+"_48.mat")
         A, _ = get_ICBP_pilots(path, N, K)
 
-    grid_size = 2*cell_radius+1
-    grid = np.zeros((grid_size,grid_size))
     for i in range(s):
-        grid, indices = populate_cell(grid, K)
+        indices = populate_cell_radius(cell_radius, margin, K)
 
-        distances2b, distance_matrix = calculate_distances(grid, indices, M, K)
+        distances2b, distance_matrix = calculate_distances_radius(indices, K)
 
         H = simulate_path_loss_rayleigh(distances2b, distance_matrix, M, K, P, f)
 
@@ -108,9 +106,9 @@ def plot_detailed_reliability(prob1, prob2, prob1_icbp, prob2_icbp, method1, met
     if(x_log):
         plt.xscale("log")
     plt.yscale("log")
-    plt.ylim(0.001, 2)
+    plt.ylim(0.0001, 2)
     plt.title("Incorrect Detection Probability vs. " + x_name)
-    plt.legend(loc="lower right")
+    plt.legend(loc="lower left")
     plt.grid(True, which='both', linestyle='--', linewidth=0.5, color='lightgray')
     plt.show()
 
@@ -118,7 +116,7 @@ def plot_detailed_reliability(prob1, prob2, prob1_icbp, prob2_icbp, method1, met
 if __name__ == "__main__":
     cell_radius = 500  # in meters
     N = 100
-    K = 8  # N total users, K active users
+    K = 4  # N total users, K active users
     P = 1
     freq = 2  # in GHz
     SNR = 1000  # in dB
